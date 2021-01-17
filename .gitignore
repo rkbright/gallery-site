@@ -64,3 +64,6 @@ images/**
 .config
 notes/**
 .vscode/**
+
+# Anything under a exp folder
+**/exp/*

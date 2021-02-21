@@ -4,6 +4,7 @@ import (
 	"errors"
 	"gallery-site/hash"
 	"gallery-site/rand"
+	"strings"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -112,6 +113,16 @@ type userValidator struct {
 	hmac hash.HMAC
 }
 
+func (uv *userValidator) ByEmail(email string) (*User, error) {
+	user := User{
+		Email: email,
+	}
+	if err := runUserValFunc(&user, uv.normalizeEmail); err != nil {
+		return nil, err
+	}
+	return uv.UserDB.ByEmail(user.Email)
+}
+
 func (uv *userValidator) Delete(id uint) error {
 	var user User
 	user.ID = id
@@ -153,6 +164,12 @@ func (uv *userValidator) idGreaterThan(n uint) userValFunc {
 	})
 }
 
+func (uv *userValidator) normalizeEmail(user *User) error {
+	user.Email = strings.ToLower(user.Email)
+	user.Email = strings.TrimSpace(user.Email)
+	return nil
+}
+
 func (uv *userValidator) setRememberIfUnset(user *User) error {
 	if user.Remember != "" {
 		return nil
@@ -166,7 +183,7 @@ func (uv *userValidator) setRememberIfUnset(user *User) error {
 }
 
 func (uv *userValidator) Update(user *User) error {
-	err := runUserValFunc(user, uv.bcryptPassword, uv.hmacRemember)
+	err := runUserValFunc(user, uv.bcryptPassword, uv.hmacRemember, uv.normalizeEmail)
 	if err != nil {
 		return err
 	}
@@ -184,7 +201,7 @@ func (uv *userValidator) ByRemember(token string) (*User, error) {
 }
 
 func (uv *userValidator) Create(user *User) error {
-	err := runUserValFunc(user, uv.bcryptPassword, uv.setRememberIfUnset, uv.hmacRemember)
+	err := runUserValFunc(user, uv.bcryptPassword, uv.setRememberIfUnset, uv.hmacRemember, uv.normalizeEmail)
 	if err != nil {
 		return err
 	}

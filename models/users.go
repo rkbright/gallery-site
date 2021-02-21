@@ -113,8 +113,11 @@ type userValidator struct {
 }
 
 func (uv *userValidator) Delete(id uint) error {
-	if id == 0 {
-		return ErrInvalidID
+	var user User
+	user.ID = id
+	err := runUserValFunc(&user, uv.idGreaterThan(0))
+	if err != nil {
+		return err
 	}
 	return uv.UserDB.Delete(id)
 }
@@ -139,6 +142,15 @@ func (uv *userValidator) hmacRemember(user *User) error {
 	}
 	user.RememberHash = uv.hmac.Hash(user.Remember)
 	return nil
+}
+
+func (uv *userValidator) idGreaterThan(n uint) userValFunc {
+	return userValFunc(func(user *User) error {
+		if user.ID <= n {
+			return ErrInvalidID
+		}
+		return nil
+	})
 }
 
 func (uv *userValidator) setRememberIfUnset(user *User) error {
